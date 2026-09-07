@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TLI493D-x4D7 GUI</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 13px; background: #f0f0f0; color: #1a1a1a; }
+
+/* ── Layout ─────────────────────────────────────── */
+#app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+#header {
+  background: #1a3a5c; color: white;
+  padding: 8px 16px; display: flex; align-items: center; gap: 14px;
+  flex-shrink: 0;
+}
+#header h1 { font-size: 15px; font-weight: bold; margin: 0; }
+#header .sub { font-size: 11px; color: #9bbcd6; }
+
+#connect-bar {
+  background: white; border-bottom: 2px solid #d0d8e0;
+  padding: 7px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+#no-serial-warn {
+  background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;
+  padding: 6px 10px; font-size: 12px; display: none;
+}
+
+/* sensor view = full remaining height */
+#sensor-view { flex: 1; display: none; flex-direction: row; overflow: hidden; }
+#sensor-view.visible { display: flex; }
+
+/* ── Config panel (left) ─────────────────────────── */
+#config-panel {
+  width: 44%; min-width: 360px;
+  background: white; border-right: 2px solid #d0d8e0;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#config-inner { flex: 1; overflow-y: auto; padding: 10px; }
+#config-footer {
+  padding: 6px 10px; border-top: 1px solid #ddd; background: #fafafa;
+  flex-shrink: 0;
+}
+
+/* ── Data panel (right) ──────────────────────────── */
+#data-panel {
+  flex: 1; background: white; overflow-y: auto;
+  padding: 10px; display: flex; flex-direction: column; gap: 8px;
+}
+
+/* ── Delay slider ────────────────────────────────── */
+.delay-row {
+  display: flex; align-items: center; gap: 8px;
+  background: #f4f7fa; border-radius: 5px; padding: 6px 10px; margin-bottom: 8px;
+}
+.delay-row label { font-size: 11px; white-space: nowrap; }
+.delay-row input[type=range] { flex: 1; }
+#delay-display { font-family: Consolas, monospace; font-size: 12px; font-weight: bold; min-width: 56px; text-align: right; }
+
+/* ── Tabs ────────────────────────────────────────── */
+.tab-bar { display: flex; gap: 2px; border-bottom: 2px solid #1a3a5c; flex-wrap: wrap; }
+.tab-btn {
+  padding: 5px 9px; background: #dde6ef; border: none; cursor: pointer;
+  font-size: 11px; border-radius: 4px 4px 0 0; white-space: nowrap; transition: background .12s;
+}
+.tab-btn.active { background: #1a3a5c; color: white; font-weight: bold; }
+.tab-btn:not(.active):hover { background: #b8c8d8; }
+.tab-pane { display: none; padding: 8px 0; }
+.tab-pane.active { display: block; }
+
+/* ── Register table ──────────────────────────────── */
+.reg-wrap { overflow-x: auto; margin: 6px 0; }
+.reg-table {
+  border-collapse: collapse; font-size: 9.5px; width: 100%; table-layout: auto;
+}
+.reg-table td, .reg-table th {
+  border: 1px solid #b0b8c0; padding: 2px 4px; text-align: center; vertical-align: middle;
+}
+.reg-table th { background: #e4eaf0; font-weight: bold; }
+.cell-gray { background: #606060; color: white; font-size: 9px; }
+.cell-active { font-family: Consolas, monospace; font-weight: bold; color: #0a4080; }
+.cell-bit { font-family: Consolas, monospace; }
+.cell-name { text-align: left; font-weight: bold; padding-left: 4px; }
+
+/* ── Channel / Mode controls ─────────────────────── */
+.section-title { font-size: 12px; font-weight: bold; margin: 10px 0 5px; color: #1a3a5c; }
+.ctrl-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.ctrl-box {
+  flex: 1; min-width: 160px; border: 1px solid #c8d4de; border-radius: 4px;
+  padding: 7px; background: #f8fafc;
+}
+.ctrl-box .legend { display: block; font-size: 11px; font-weight: bold; margin-bottom: 5px; color: #2a4a6c; }
+.slider-wrap { display: flex; align-items: center; gap: 6px; }
+.slider-wrap input[type=range] { flex: 1; min-width: 80px; }
+.slider-lbl { font-size: 10px; font-family: Consolas, monospace; color: #444; margin-top: 2px; }
+.radio-opt { font-size: 11px; display: block; margin: 2px 0; }
+.check-opt { font-size: 11px; display: block; margin: 3px 0; }
+input[type=radio], input[type=checkbox] { margin-right: 4px; cursor: pointer; }
+label { cursor: pointer; }
+
+/* ── Sensor table (data panel) ───────────────────── */
+.panel-title { font-size: 12px; font-weight: bold; color: #1a3a5c; margin-bottom: 4px; }
+.sensor-tbl { border-collapse: collapse; width: 100%; font-size: 11px; }
+.sensor-tbl th { background: #1a3a5c; color: white; padding: 5px 7px; border: 1px solid #0c2a48; text-align: center; }
+.sensor-tbl td { border: 1px solid #d4dce4; padding: 4px 7px; text-align: center; font-family: Consolas, monospace; white-space: pre-line; }
+.sensor-tbl tr:nth-child(even) td { background: #f2f6fa; }
+
+/* ── Raw hex lines ───────────────────────────────── */
+.raw-lines { font-family: Consolas, monospace; font-size: 11px; color: #444; line-height: 1.5; }
+
+/* ── Plot ────────────────────────────────────────── */
+#plot-canvas { display: block; width: 100%; background: white; border: 1px solid #ccd4dc; border-radius: 3px; }
+.plot-legend { font-size: 10px; color: #666; margin-top: 3px; }
+
+/* ── Recording ───────────────────────────────────── */
+.rec-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rec-dot { width: 9px; height: 9px; border-radius: 50%; background: #bbb; display: inline-block; }
+.rec-dot.active { background: #e03030; animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+.rec-count { font-size: 11px; font-family: Consolas, monospace; color: #555; }
+
+/* ── Status lines ────────────────────────────────── */
+.status-line { font-family: Consolas, monospace; font-size: 10.5px; color: #555; }
+
+/* ── Buttons ─────────────────────────────────────── */
+button {
+  padding: 5px 13px; border: none; border-radius: 4px;
+  cursor: pointer; font-size: 12px; font-family: inherit;
+}
+.btn-primary   { background: #1a3a5c; color: white; }
+.btn-primary:hover   { background: #0e2a48; }
+.btn-primary:disabled { background: #8aabbf; cursor: default; }
+.btn-success   { background: #217a3e; color: white; }
+.btn-success:hover   { background: #175e2f; }
+.btn-danger    { background: #b83030; color: white; }
+.btn-danger:hover    { background: #962626; }
+.btn-secondary { background: #6c7a8a; color: white; }
+.btn-secondary:hover { background: #56606e; }
+
+select { padding: 4px 7px; border: 1px solid #b8c8d8; border-radius: 4px; font-size: 12px; }
+
+hr.sep { border: none; border-top: 1px solid #e4eaf0; margin: 4px 0; }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f0f4f8; }
+::-webkit-scrollbar-thumb { background: #b0bcc8; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── Header ─────────────────────────────────────── -->
+<div id="header">
+  <h1>TLI493D-x4D7 GUI</h1>
+  <span class="sub">Web Edition · Build 2026-07-02 · Requires Chrome / Edge</span>
+</div>
+
+<!-- ── Connect bar ────────────────────────────────── -->
+<div id="connect-bar">
+  <label for="hw-ver">Hardware version:</label>
+  <select id="hw-ver">
+    <option value="0000">0000</option>
+    <option value="1000">1000</option>
+  </select>
+  <button id="connect-btn" class="btn-primary">Connect Serial Port</button>
+  <button id="disconnect-btn" class="btn-secondary" style="display:none">Disconnect</button>
+  <span id="connect-status" class="status-line">Not connected. Select hardware version and click Connect.</span>
+  <div id="no-serial-warn">
+    ⚠ Web Serial API not available. Open this file in Chrome or Edge (version 89+).
+  </div>
+</div>
+
+<!-- ── Sensor view ────────────────────────────────── -->
+<div id="sensor-view">
+
+  <!-- ── Left: Config panel ──────────────────────── -->
+  <div id="config-panel">
+    <div id="config-inner">
+
+      <!-- Delay slider -->
+      <div class="delay-row">
+        <label for="delay-slider">Readout delay:</label>
+        <input type="range" id="delay-slider" min="0" max="100" value="75">
+        <span id="delay-display">316 ms</span>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar" id="cfg-tab-bar">
+        <button class="tab-btn active" data-tab="tab-bc">All sensors identical config</button>
+        <button class="tab-btn" data-tab="tab-s0">Sensor 0 individual</button>
+        <button class="tab-btn" data-tab="tab-s1">Sensor 1 individual</button>
+        <button class="tab-btn" data-tab="tab-s2">Sensor 2 individual</button>
+        <button class="tab-btn" data-tab="tab-s3">Sensor 3 individual</button>
+      </div>
+
+      <!-- Broadcast tab -->
+      <div class="tab-pane active" id="tab-bc">
+        <p style="font-size:11px;color:#555;margin-bottom:6px;">Broadcast configuration (0x7A) — configures all sensors identically</p>
+        <div class="reg-wrap">
+          <table class="reg-table">
+            <thead>
+              <tr><th colspan="2">bytes</th><th colspan="8">bits</th><th>reset</th><th>active cfg</th></tr>
+              <tr><th>name</th><th>hex</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th><th>0</th><th></th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="cell-name" rowspan="2">bx_config</td><td rowspan="2">0x08</td>
+                <td class="cell-gray" colspan="3">bx_disable/zero_point (w)</td><td>RES</td>
+                <td class="cell-gray" colspan="3">bx_range (w)</td><td>RES</td>
+                <td rowspan="2">0x8E</td><td rowspan="2" class="cell-active" id="bx-cfg">0x8E</td>
+              </tr>
+              <tr><td class="cell-bit" id="bx7"></td><td class="cell-bit" id="bx6"></td><td class="cell-bit" id="bx5"></td><td class="cell-bit" id="bx4"></td><td class="cell-bit" id="bx3"></td><td class="cell-bit" id="bx2"></td><td class="cell-bit" id="bx1"></td><td class="cell-bit" id="bx0"></td></tr>
+              <tr>
+                <td class="cell-name" rowspan="2">by_config</td><td rowspan="2">0x09</td>
+                <td class="cell-gray" colspan="3">by_disable/zero_point (w)</td><td>RES</td>
+                <td class="cell-gray" colspan="3">by_range (w)</td><td>RES</td>
+                <td rowspan="2">0x8E</td><td rowspan="2" class="cell-active" id="by-cfg">0x8E</td>
+              </tr>
+              <tr><td class="cell-bit" id="by7"></td><td class="cell-bit" id="by6"></td><td class="cell-bit" id="by5"></td><td class="cell-bit" id="by4"></td><td class="cell-bit" id="by3"></td><td class="cell-bit" id="by2"></td><td class="cell-bit" id="by1"></td><td class="cell-bit" id="by0"></td></tr>
+              <tr>
+                <td class="cell-name" rowspan="2">bz_config</td><td rowspan="2">0x0A</td>
+                <td class="cell-gray" colspan="3">bz_disable/zero_point (w)</td><td>RES</td>
+                <td class="cell-gray" colspan="3">bz_range (w)</td><td>RES</td>
+                <td rowspan="2">0x8E</td><td rowspan="2" class="cell-active" id="bz-cfg">0x8E</td>
+              </tr>
+              <tr><td class="cell-bit" id="bz7"></td><td class="cell-bit" id="bz6"></td><td class="cell-bit" id="bz5"></td><td class="cell-bit" id="bz4"></td><td class="cell-bit" id="bz3"></td><td class="cell-bit" id="bz2"></td><td class="cell-bit" id="bz1"></td><td class="cell-bit" id="bz0"></td></tr>
+              <tr>
+                <td class="cell-name" rowspan="2">mode_1</td><td rowspan="2">0x0B</td>
+                <td class="cell-gray" colspan="2">timeout (w)</td>
+                <td class="cell-gray">low_pwr_en (w)</td><td class="cell-gray">temp_en (w)</td>
+                <td class="cell-gray" colspan="3">adc_conv_time (w)</td><td class="cell-gray">sigma_delta (w)</td>
+                <td rowspan="2">0x90</td><td rowspan="2" class="cell-active" id="m1-cfg">0x90</td>
+              </tr>
+              <tr><td class="cell-bit" id="m17"></td><td class="cell-bit" id="m16"></td><td class="cell-bit" id="m15"></td><td class="cell-bit" id="m14"></td><td class="cell-bit" id="m13"></td><td class="cell-bit" id="m12"></td><td class="cell-bit" id="m11"></td><td class="cell-bit" id="m10"></td></tr>
+              <tr>
+                <td class="cell-name" rowspan="2">mode_2</td><td rowspan="2">0x0C</td>
+                <td class="cell-gray">interleave (w)</td><td class="cell-gray" colspan="2">output_size (w)</td>
+                <td colspan="5">RES</td>
+                <td rowspan="2">0x20</td><td rowspan="2" class="cell-active" id="m2-cfg">0x20</td>
+              </tr>
+              <tr><td class="cell-bit" id="m27"></td><td class="cell-bit" id="m26"></td><td class="cell-bit" id="m25"></td><td class="cell-bit" id="m24"></td><td class="cell-bit" id="m23"></td><td class="cell-bit" id="m22"></td><td class="cell-bit" id="m21"></td><td class="cell-bit" id="m20"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="bc-controls"></div>
+      </div>
+
+      <!-- Individual sensor tabs -->
+      <div class="tab-pane" id="tab-s0"><p style="font-size:11px;color:#555;margin-bottom:6px;">Individual config for Sensor 0 (0x43)</p><div id="ind-ctrl-0"></div><div class="status-line" id="ind-st-0" style="margin-top:6px;">Individual config idle</div></div>
+      <div class="tab-pane" id="tab-s1"><p style="font-size:11px;color:#555;margin-bottom:6px;">Individual config for Sensor 1 (0x43)</p><div id="ind-ctrl-1"></div><div class="status-line" id="ind-st-1" style="margin-top:6px;">Individual config idle</div></div>
+      <div class="tab-pane" id="tab-s2"><p style="font-size:11px;color:#555;margin-bottom:6px;">Individual config for Sensor 2 (0x43)</p><div id="ind-ctrl-2"></div><div class="status-line" id="ind-st-2" style="margin-top:6px;">Individual config idle</div></div>
+      <div class="tab-pane" id="tab-s3"><p style="font-size:11px;color:#555;margin-bottom:6px;">Individual config for Sensor 3 (0x43)</p><div id="ind-ctrl-3"></div><div class="status-line" id="ind-st-3" style="margin-top:6px;">Individual config idle</div></div>
+
+    </div><!-- /config-inner -->
+
+    <div id="config-footer">
+      <div class="status-line" id="startup-status">Startup: waiting for connection</div>
+      <div class="status-line" id="startup-debug" style="font-size:10px;color:#888;"></div>
+    </div>
+  </div><!-- /config-panel -->
+
+  <!-- ── Right: Data panel ────────────────────────── -->
+  <div id="data-panel">
+
+    <div>
+      <div class="panel-title">Latest readout (0x48)</div>
+      <div class="raw-lines">
+        <div id="raw0">Sensor 0: —</div>
+        <div id="raw1">Sensor 1: —</div>
+        <div id="raw2">Sensor 2: —</div>
+        <div id="raw3">Sensor 3: —</div>
+      </div>
+    </div>
+
+    <hr class="sep">
+
+    <div>
+      <div class="panel-title">Decoded Sensor Values</div>
+      <table class="sensor-tbl">
+        <thead><tr><th>Sensor</th><th>Bx</th><th>By</th><th>Bz</th><th>Temp</th><th>Frame Counter</th></tr></thead>
+        <tbody>
+          <tr><td>Sensor 0</td><td id="s0bx">—</td><td id="s0by">—</td><td id="s0bz">—</td><td id="s0tp">—</td><td id="s0fc">—</td></tr>
+          <tr><td>Sensor 1</td><td id="s1bx">—</td><td id="s1by">—</td><td id="s1bz">—</td><td id="s1tp">—</td><td id="s1fc">—</td></tr>
+          <tr><td>Sensor 2</td><td id="s2bx">—</td><td id="s2by">—</td><td id="s2bz">—</td><td id="s2tp">—</td><td id="s2fc">—</td></tr>
+          <tr><td>Sensor 3</td><td id="s3bx">—</td><td id="s3by">—</td><td id="s3bz">—</td><td id="s3tp">—</td><td id="s3fc">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="sep">
+
+    <div>
+      <div class="panel-title">Last 50 LSB Samples</div>
+      <canvas id="plot-canvas" height="220"></canvas>
+      <div class="plot-legend">Colors: Bx=red, By=green, Bz=blue, Temp=yellow, Frame counter=gray &nbsp;·&nbsp; Dark→Bright = Sensor 0→3</div>
+    </div>
+
+    <hr class="sep">
+
+    <div>
+      <div class="rec-bar">
+        <span class="rec-dot" id="rec-dot"></span>
+        <button id="rec-btn" class="btn-success">Start Recording</button>
+        <button id="dl-btn" class="btn-secondary" style="display:none">Download CSV</button>
+        <span class="rec-count" id="rec-count"></span>
+      </div>
+    </div>
+
+    <hr class="sep">
+
+    <div>
+      <div class="status-line" id="ro-status">Readout: idle</div>
+      <div class="status-line" id="cfg-status">Config: idle</div>
+    </div>
+
+  </div><!-- /data-panel -->
+</div><!-- /sensor-view -->
+</div><!-- /app -->
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════
+//  Constants
+// ═══════════════════════════════════════════════════
+const STARTUP_CMD_1      = 0x00;
+const STARTUP_CMD_2      = 0x4F;
+const READOUT_CMD        = 0x48;
+const CONFIG_CMD         = 0x7A;
+const IND_CONFIG_CMD     = 0x43;
+const CONFIG_ECHO_LEN    = 6;   // 0x7A + 5 bytes
+const IND_CONFIG_ECHO_LEN= 7;   // 0x43 + addr + 5 bytes
+const BAUDRATE           = 1000000;
+const USB_VID            = 0x058B;
+const USB_PID            = 0xABCD;
+const PLOT_HISTORY_LEN   = 50;
+const RESPONSE_LEN       = 5;
+
+const DISABLE_OPTS = [
+  '0b000 = DISABLE the channel',
+  '0b001 = +41.7 mT',
+  '0b010 = +27.8 mT',
+  '0b011 = +13.9 mT',
+  '0b100 = 0.0 mT (default)',
+  '0b101 = -13.9 mT',
+  '0b110 = -27.8 mT',
+  '0b111 = -41.7 mT',
+];
+const RANGE_OPTS = [
+  '0b000 = ±17.4 mT',
+  '0b001 = ±34.8 mT',
+  '0b010 = ±52.1 mT',
+  '0b011 = ±69.5 mT',
+  '0b100 = ±87 mT',
+  '0b101 = ±104 mT',
+  '0b110 = ±122 mT',
+  '0b111 = ±139 mT (default)',
+];
+const TIMEOUT_OPTS = [
+  [0, '0b00 = 0 µs (do not use with >1 sensor on bus)'],
+  [1, '0b01 = 55 µs'],
+  [2, '0b10 = 330 µs (default)'],
+  [3, '0b11 = 700 µs'],
+];
+const ADC_OPTS = [
+  [0, '0b000 = 50 µs (default)'],
+  [1, '0b001 = 100 µs'],
+  [2, '0b010 = 200 µs'],
+  [3, '0b011 = 400 µs'],
+  [4, '0b100 = 800 µs'],
+];
+const SIGMA_OPTS = [
+  [0, '0b0 = 16 SD samples (default)'],
+  [1, '0b1 = 32 SD samples'],
+];
+const INTERLEAVE_OPTS = [
+  [0, '0b0 = Disable (X X Y Y Z Z T) (default)'],
+  [1, '0b1 = Enable (X Y Z Z Y X T)'],
+];
+const OUTPUT_SIZE_OPTS = [
+  [0, '0b00 = MSBs only (8-bit result)'],
+  [1, '0b01 = MSBs + b_lsb10 (10-bit result) (default)'],
+  [2, '0b10 = MSBs + LSBs (16-bit result)'],
+];
+
+const RANGES_MT   = [17.4, 34.8, 52.1, 69.5, 87.0, 104.0, 122.0, 139.0];
+const OFFSETS_MT  = [0, 41.7, 27.8, 13.9, 0, -13.9, -27.8, -41.7];
+const PLOT_COLS   = ['bx', 'by', 'bz', 'temp', 'frame_counter'];
+const INTENSITIES = [0.40, 0.55, 0.72, 0.90];
+const BASE_RGB    = { bx:[255,0,0], by:[0,170,0], bz:[0,90,255], temp:[230,180,0], frame_counter:null };
+
+// ═══════════════════════════════════════════════════
+//  State
+// ═══════════════════════════════════════════════════
+function defaultCfg() {
+  return { bxDisable:4, bxRange:7, byDisable:4, byRange:7, bzDisable:4, bzRange:7,
+           timeout:2, lowPwr:false, tempEn:true, adc:0, sigma:0, interleave:0, outputSize:1 };
+}
+
+const st = {
+  port: null, writer: null, reader: null,
+  serialBuf: new Uint8Array(0),
+  running: false, hwVer: '0000',
+
+  broadcast: defaultCfg(),
+  individual: [defaultCfg(), defaultCfg(), defaultCfg(), defaultCfg()],
+  indDirty:  [false, false, false, false],
+  indActive: [false, false, false, false],
+  cfgDirty:  true,
+  lastSentCfg: null,
+  appliedCfgs: [null, null, null, null],
+
+  delayMs: 316,
+
+  plotHist: (() => { const h={}; for(let s=0;s<4;s++) for(const c of PLOT_COLS) h[`${s}_${c}`]=[]; return h; })(),
+  recording: false,
+  recRows: [],
+  csvBlob: null,
+};
+
+// ═══════════════════════════════════════════════════
+//  Config byte builders
+// ═══════════════════════════════════════════════════
+function buildCfgBytes(c) {
+  const bx = ((c.bxDisable&7)<<5)|((c.bxRange&7)<<1);
+  const by = ((c.byDisable&7)<<5)|((c.byRange&7)<<1);
+  const bz = ((c.bzDisable&7)<<5)|((c.bzRange&7)<<1);
+  const m1 = ((c.timeout&3)<<6)|((c.lowPwr?1:0)<<5)|((c.tempEn?1:0)<<4)|((c.adc&7)<<1)|(c.sigma&1);
+  const m2 = ((c.interleave&1)<<7)|((c.outputSize&3)<<5);
+  return new Uint8Array([bx,by,bz,m1,m2]);
+}
+
+function parseCfgLayout(b) {
+  return {
+    bxDisable:(b[0]>>5)&7, bxRange:(b[0]>>1)&7,
+    byDisable:(b[1]>>5)&7, byRange:(b[1]>>1)&7,
+    bzDisable:(b[2]>>5)&7, bzRange:(b[2]>>1)&7,
+    timeout:(b[3]>>6)&3, lowPwr:Boolean((b[3]>>5)&1), tempEn:Boolean((b[3]>>4)&1),
+    adc:(b[3]>>1)&7, sigma:b[3]&1,
+    interleave:(b[4]>>7)&1, outputSize:(b[4]>>5)&3,
+  };
+}
+
+function bytesForCfg(cfgBytes) {
+  const L = parseCfgLayout(cfgBytes);
+  const bxEn=L.bxDisable!==0, byEn=L.byDisable!==0, bzEn=L.bzDisable!==0;
+  let n=0;
+  if (L.outputSize===0) { if(bxEn)n++; if(byEn)n++; if(bzEn)n++; if(L.tempEn)n++; }
+  else if (L.outputSize===1) { if(bxEn)n++; if(byEn)n++; if(bzEn)n++; if(L.tempEn)n++; n++; }
+  else { if(bxEn)n+=2; if(byEn)n+=2; if(bzEn)n+=2; if(L.tempEn)n++; }
+  return n;
+}
+
+function totalReadoutLen() {
+  let t=1;
+  for(let s=0;s<4;s++) t+=bytesForCfg(activeCfg(s));
+  return t;
+}
+
+function activeCfg(s) {
+  return st.appliedCfgs[s] || buildCfgBytes(st.broadcast);
+}
+
+function wakeupNeeded() {
+  return st.appliedCfgs.some(c => c && ((c[3]>>5)&1));
+}
+
+function bytesEq(a,b) {
+  if(!a||!b||a.length!==b.length) return false;
+  for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return false;
+  return true;
+}
+
+// ═══════════════════════════════════════════════════
+//  Data decoding
+// ═══════════════════════════════════════════════════
+function toSigned(v, bits) { return v>=(1<<(bits-1)) ? v-(1<<bits) : v; }
+
+function fmtMag(v, bits, rng, dis) {
+  if(v===null||v===undefined) return `N/A (LSB${bits})`;
+  const sv = toSigned(v, bits);
+  const fs = RANGES_MT[rng]??139.0;
+  const off = OFFSETS_MT[dis]??0;
+  const maxPos=(1<<(bits-1))-1, minNeg=1<<(bits-1);
+  const norm = sv>=0 ? (maxPos?sv/maxPos:0) : sv/minNeg;
+  const phys = norm*fs - off;
+  return `${sv} (LSB${bits})\n${phys>=0?'+':''}${phys.toFixed(2)} mT`;
+}
+
+function fmtTemp(v) {
+  if(v===null||v===undefined) return 'N/A (LSB8)';
+  const sv=toSigned(v,8);
+  const p=sv*0.7+41.5;
+  return `${sv} (LSB8)\n${p>=0?'+':''}${p.toFixed(2)} °C`;
+}
+
+function fmtPrec(v, bits) {
+  if(v===null||v===undefined) return `N/A (LSB${bits})`;
+  return `${v} (LSB${bits})`;
+}
+
+function decodeSensorChunk(chunk, cfgBytes) {
+  const L=parseCfgLayout(cfgBytes);
+  const bxEn=L.bxDisable!==0, byEn=L.byDisable!==0, bzEn=L.bzDisable!==0;
+  let idx=0, bx=null, by=null, bz=null, temp=null, fc=null;
+
+  if (L.outputSize===0) {
+    if(bxEn&&idx<chunk.length) bx=chunk[idx++];
+    if(byEn&&idx<chunk.length) by=chunk[idx++];
+    if(bzEn&&idx<chunk.length) bz=chunk[idx++];
+    if(L.tempEn&&idx<chunk.length) temp=chunk[idx++];
+    return { bx:fmtMag(bx,8,L.bxRange,L.bxDisable), by:fmtMag(by,8,L.byRange,L.byDisable),
+             bz:fmtMag(bz,8,L.bzRange,L.bzDisable), temp:fmtTemp(temp), fc:fmtPrec(null,2),
+             _bx:bx!==null?toSigned(bx,8):null, _by:by!==null?toSigned(by,8):null,
+             _bz:bz!==null?toSigned(bz,8):null, _temp:temp!==null?toSigned(temp,8):null, _fc:null };
+  }
+
+  if (L.outputSize===1) {
+    let bxM=null, byM=null, bzM=null;
+    if(bxEn&&idx<chunk.length) bxM=chunk[idx++];
+    if(byEn&&idx<chunk.length) byM=chunk[idx++];
+    if(bzEn&&idx<chunk.length) bzM=chunk[idx++];
+    if(L.tempEn&&idx<chunk.length) temp=chunk[idx++];
+    let lsb10=null;
+    if(idx<chunk.length) lsb10=chunk[idx++];
+    if(lsb10!==null) {
+      fc=lsb10&0x03;
+      if(bxM!==null) bx=(bxM<<2)|((lsb10&0xC0)>>6);
+      if(byM!==null) by=(byM<<2)|((lsb10&0x30)>>4);
+      if(bzM!==null) bz=(bzM<<2)|((lsb10&0x0C)>>2);
+    }
+    return { bx:fmtMag(bx,10,L.bxRange,L.bxDisable), by:fmtMag(by,10,L.byRange,L.byDisable),
+             bz:fmtMag(bz,10,L.bzRange,L.bzDisable), temp:fmtTemp(temp), fc:fmtPrec(fc,2),
+             _bx:bx!==null?toSigned(bx,10):null, _by:by!==null?toSigned(by,10):null,
+             _bz:bz!==null?toSigned(bz,10):null, _temp:temp!==null?toSigned(temp,8):null, _fc:fc };
+  }
+
+  // output_size === 2, 16-bit
+  if(bxEn&&idx+1<chunk.length) { bx=(chunk[idx]<<8)|chunk[idx+1]; idx+=2; }
+  if(byEn&&idx+1<chunk.length) { by=(chunk[idx]<<8)|chunk[idx+1]; idx+=2; }
+  if(bzEn&&idx+1<chunk.length) { bz=(chunk[idx]<<8)|chunk[idx+1]; idx+=2; }
+  if(L.tempEn&&idx<chunk.length) temp=chunk[idx++];
+  return { bx:fmtMag(bx,16,L.bxRange,L.bxDisable), by:fmtMag(by,16,L.byRange,L.byDisable),
+           bz:fmtMag(bz,16,L.bzRange,L.bzDisable), temp:fmtTemp(temp), fc:fmtPrec(null,2),
+           _bx:bx!==null?toSigned(bx,16):null, _by:by!==null?toSigned(by,16):null,
+           _bz:bz!==null?toSigned(bz,16):null, _temp:temp!==null?toSigned(temp,8):null, _fc:null };
+}
+
+// ═══════════════════════════════════════════════════
+//  Serial helpers
+// ═══════════════════════════════════════════════════
+async function writeSerial(bytes) {
+  await st.writer.write(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+}
+
+async function readSerialBytes(n, timeoutMs=2000) {
+  const deadline = Date.now()+timeoutMs;
+  while (st.serialBuf.length < n) {
+    if (Date.now()>deadline)
+      throw new Error(`Read timeout: needed ${n}, got ${st.serialBuf.length} bytes`);
+    await sleep(5);
+  }
+  const r = st.serialBuf.slice(0,n);
+  st.serialBuf = st.serialBuf.slice(n);
+  return r;
+}
+
+function clearSerialBuf() { st.serialBuf = new Uint8Array(0); }
+
+async function sleep(ms) { return new Promise(r => setTimeout(r,ms)); }
+
+function toHex(bytes) {
+  return Array.from(bytes).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+}
+
+// Continuous background reader fills st.serialBuf
+async function readerCoroutine() {
+  try {
+    while (st.running) {
+      const {value, done} = await st.reader.read();
+      if (done) break;
+      if (value && value.length) {
+        const merged = new Uint8Array(st.serialBuf.length+value.length);
+        merged.set(st.serialBuf);
+        merged.set(value, st.serialBuf.length);
+        st.serialBuf = merged;
+      }
+    }
+  } catch(_) { /* port closed or cancelled */ }
+}
+
+// ═══════════════════════════════════════════════════
+//  Protocol: startup
+// ═══════════════════════════════════════════════════
+async function runStartup() {
+  setStartupSt('Running startup routine...', '');
+  try {
+    clearSerialBuf();
+    await writeSerial([STARTUP_CMD_1]);
+    await sleep(2);
+    clearSerialBuf();                          // discard anything received
+    await writeSerial([STARTUP_CMD_2]);
+
+    let resp;
+    try { resp = await readSerialBytes(RESPONSE_LEN, 500); }
+    catch(_) { resp = new Uint8Array(0); }
+    await sleep(2);
+
+    if (resp.length===RESPONSE_LEN)
+      setStartupSt('Startup OK', `response=${toHex(resp)}`);
+    else
+      setStartupSt(`Startup: short response (${resp.length} bytes)`, `response=${toHex(resp)}`);
+  } catch(err) {
+    setStartupSt(`Startup failed: ${err.message}`, '');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  Protocol: driver loop
+// ═══════════════════════════════════════════════════
+async function driverLoop() {
+  while (st.running) {
+    try {
+
+      /* ── Broadcast config ── */
+      const cfgBytes = buildCfgBytes(st.broadcast);
+      if (st.cfgDirty || !bytesEq(cfgBytes, st.lastSentCfg)) {
+        const cmd = new Uint8Array([CONFIG_CMD, ...cfgBytes]);
+        let attempt=0;
+        while (st.running) {
+          if (wakeupNeeded()) { clearSerialBuf(); await writeSerial([STARTUP_CMD_1]); await sleep(1); }
+          clearSerialBuf();
+          await writeSerial(cmd);
+          let echo;
+          try { echo=await readSerialBytes(CONFIG_ECHO_LEN,500); } catch(_){ echo=new Uint8Array(0); }
+          if (bytesEq(echo,cmd)) {
+            st.lastSentCfg = cfgBytes;
+            st.cfgDirty = false;
+            st.appliedCfgs = [cfgBytes,cfgBytes,cfgBytes,cfgBytes];
+            st.indActive = [false,false,false,false];
+            st.indDirty  = [false,false,false,false];
+            setCfgSt(`Config applied: ${toHex(cfgBytes)}`);
+            break;
+          }
+          st.cfgDirty=true;
+          setCfgSt(`Config echo mismatch attempt ${++attempt} (${echo.length}b): ${toHex(echo)} — retrying`);
+          await sleep(1);
+        }
+        if (!st.running) break;
+        await sleep(1);
+      } else {
+        setCfgSt('Config: no changes pending');
+      }
+
+      /* ── Individual sensor configs ── */
+      for (let s=0; s<4; s++) {
+        if (!st.indActive[s] || !st.indDirty[s]) continue;
+        const indCfg = buildCfgBytes(st.individual[s]);
+        const cmd = new Uint8Array([IND_CONFIG_CMD, s, ...indCfg]);
+        let attempt=0;
+        while (st.running) {
+          if (wakeupNeeded()) { clearSerialBuf(); await writeSerial([STARTUP_CMD_1]); await sleep(1); }
+          clearSerialBuf();
+          await writeSerial(cmd);
+          let echo;
+          try { echo=await readSerialBytes(IND_CONFIG_ECHO_LEN,500); } catch(_){ echo=new Uint8Array(0); }
+          if (bytesEq(echo,cmd)) {
+            st.indDirty[s]=false; st.indActive[s]=true; st.appliedCfgs[s]=indCfg;
+            setIndSt(s,`Applied via 0x43: ${toHex(indCfg)}`);
+            break;
+          }
+          st.indDirty[s]=true;
+          setIndSt(s,`0x43 echo mismatch attempt ${++attempt}: ${toHex(echo)}`);
+          await sleep(1);
+        }
+        if (!st.running) break;
+        await sleep(1);
+      }
+      if (!st.running) break;
+
+      /* ── Readout ── */
+      if (wakeupNeeded()) { clearSerialBuf(); await writeSerial([STARTUP_CMD_1]); await sleep(1); }
+      clearSerialBuf();
+      await writeSerial([READOUT_CMD]);
+
+      const expLen = totalReadoutLen();
+      let resp;
+      try { resp=await readSerialBytes(expLen,1500); }
+      catch(err) { setROSt(`Read timeout: ${err.message}`); await sleep(st.delayMs); continue; }
+
+      if (resp.length===expLen && resp[0]===READOUT_CMD) {
+        const payload=resp.slice(1);
+        const hexLines=['','','',''];
+        const rows=[null,null,null,null];
+        let cur=0;
+        for(let s=3;s>=0;s--) {   // bus order: 3,2,1,0
+          const cfg=activeCfg(s);
+          const nb=bytesForCfg(cfg);
+          const chunk=payload.slice(cur,cur+nb); cur+=nb;
+          hexLines[s]=`Sensor ${s}: ${chunk.length?toHex(chunk):'(no data)'}`;
+          rows[s]=decodeSensorChunk(chunk,cfg);
+        }
+        updateRawLines(hexLines);
+        updateSensorTable(rows);
+        updatePlotHistory(rows);
+        drawPlot();
+        captureRecording(rows);
+        setROSt('Readout OK');
+      } else {
+        setROSt(`Bad readout (expected ${expLen}, got ${resp.length}): ${toHex(resp)}`);
+      }
+
+      await sleep(st.delayMs);
+
+    } catch(err) {
+      setROSt(`Error: ${err.message}`);
+      await sleep(500);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  UI status setters
+// ═══════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+function setROSt(t)       { $('ro-status').textContent  = `Readout: ${t}`; }
+function setCfgSt(t)      { $('cfg-status').textContent = `Config: ${t}`; }
+function setStartupSt(t,d){ $('startup-status').textContent=`Startup: ${t}`; $('startup-debug').textContent=d||''; }
+function setIndSt(s,t)    { $(`ind-st-${s}`).textContent=t; }
+function setConnSt(t)     { $('connect-status').textContent=t; }
+
+function updateRawLines(lines) {
+  for(let s=0;s<4;s++) $(`raw${s}`).textContent = lines[s]||`Sensor ${s}: —`;
+}
+
+function updateSensorTable(rows) {
+  for(let s=0;s<4;s++) {
+    const r=rows[s]; if(!r) continue;
+    $(`s${s}bx`).textContent=r.bx||'—';
+    $(`s${s}by`).textContent=r.by||'—';
+    $(`s${s}bz`).textContent=r.bz||'—';
+    $(`s${s}tp`).textContent=r.temp||'—';
+    $(`s${s}fc`).textContent=r.fc||'—';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  Plot
+// ═══════════════════════════════════════════════════
+function updatePlotHistory(rows) {
+  for(let s=0;s<4;s++){
+    const r=rows[s]; if(!r) continue;
+    push(s,'bx',r._bx); push(s,'by',r._by); push(s,'bz',r._bz);
+    push(s,'temp',r._temp); push(s,'frame_counter',r._fc);
+  }
+}
+function push(s,col,val){
+  const a=st.plotHist[`${s}_${col}`];
+  a.push(val??null);
+  if(a.length>PLOT_HISTORY_LEN) a.shift();
+}
+
+function traceColor(col, s) {
+  const i=INTENSITIES[s];
+  if(col==='frame_counter'){ const g=Math.round(35+220*i); return `rgb(${g},${g},${g})`; }
+  const [r,g,b]=BASE_RGB[col];
+  return `rgb(${Math.round(r*i)},${Math.round(g*i)},${Math.round(b*i)})`;
+}
+
+function drawPlot() {
+  const canvas=$('plot-canvas');
+  const rect=canvas.getBoundingClientRect();
+  canvas.width=Math.round(rect.width)||640;
+  canvas.height=220;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const W=canvas.width, H=canvas.height;
+  const left=72, right=8, top=4, bot=4;
+  const pw=W-left-right, ph=H-top-bot;
+  const bh=ph/PLOT_COLS.length;
+
+  ctx.font='9px Consolas,monospace';
+
+  for(let bi=0;bi<PLOT_COLS.length;bi++){
+    const col=PLOT_COLS[bi];
+    const bt=top+bi*bh, bb=bt+bh;
+
+    ctx.strokeStyle='#d8e0e8'; ctx.strokeRect(left,bt,pw,bh);
+    ctx.fillStyle='#555'; ctx.fillText(col,2,(bt+bb)/2+4);
+
+    const allVals=[];
+    for(let s=0;s<4;s++) for(const v of st.plotHist[`${s}_${col}`]) if(v!==null) allVals.push(v);
+    if(!allVals.length) continue;
+
+    let yMin=Math.min(...allVals), yMax=Math.max(...allVals);
+    if(yMin===yMax){yMin--;yMax++;}
+
+    ctx.fillStyle='#999'; ctx.fillText(`${yMin}..${yMax}`,left+pw-2,bt+9);
+
+    for(let s=0;s<4;s++){
+      const hist=st.plotHist[`${s}_${col}`];
+      if(hist.length<2) continue;
+      ctx.strokeStyle=traceColor(col,s); ctx.lineWidth=1;
+      ctx.beginPath();
+      let pen=false;
+      for(let i=0;i<hist.length;i++){
+        const v=hist[i];
+        if(v===null){pen=false;continue;}
+        const x=left+(i/(PLOT_HISTORY_LEN-1))*pw;
+        const y=bb-((v-yMin)/(yMax-yMin))*bh;
+        pen ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+        pen=true;
+      }
+      ctx.stroke();
+      ctx.fillStyle=traceColor(col,s);
+      for(let i=0;i<hist.length;i++){
+        const v=hist[i]; if(v===null) continue;
+        const x=left+(i/(PLOT_HISTORY_LEN-1))*pw;
+        const y=bb-((v-yMin)/(yMax-yMin))*bh;
+        ctx.fillRect(x-1,y-1,2,2);
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  Recording
+// ═══════════════════════════════════════════════════
+function captureRecording(rows) {
+  if(!st.recording) return;
+  const ts=new Date().toISOString();
+  for(let s=0;s<4;s++){
+    const r=rows[s]; if(!r) continue;
+    st.recRows.push({ts, s, bx:r._bx??'', by:r._by??'', bz:r._bz??'', temp:r._temp??'', fc:r._fc??''});
+  }
+  $('rec-count').textContent=`${st.recRows.length} rows`;
+}
+
+function startRecording() {
+  st.recording=true; st.recRows=[]; st.csvBlob=null;
+  $('rec-btn').textContent='Stop Recording'; $('rec-btn').className='btn-danger';
+  $('rec-dot').classList.add('active');
+  $('dl-btn').style.display='none';
+  $('rec-count').textContent='0 rows';
+}
+
+function stopRecording() {
+  st.recording=false;
+  $('rec-btn').textContent='Start Recording'; $('rec-btn').className='btn-success';
+  $('rec-dot').classList.remove('active');
+  if(st.recRows.length){
+    const lines=[
+      `# TLI493D-x4D7 Recording`,`# Hardware version: ${st.hwVer}`,`# Recorded at: ${new Date().toISOString()}`,``,
+      `timestamp,sensor,bx_lsb,by_lsb,bz_lsb,temp_lsb,frame_counter_lsb`,
+      ...st.recRows.map(r=>`${r.ts},${r.s},${r.bx},${r.by},${r.bz},${r.temp},${r.fc}`)
+    ];
+    st.csvBlob=new Blob([lines.join('\r\n')],{type:'text/csv'});
+    $('dl-btn').style.display='';
+    $('rec-count').textContent=`${st.recRows.length} rows — ready to download`;
+  }
+}
+
+function downloadCsv() {
+  if(!st.csvBlob) return;
+  const ts=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(st.csvBlob);
+  a.download=`sensor_recording_${ts}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ═══════════════════════════════════════════════════
+//  Config UI builders
+// ═══════════════════════════════════════════════════
+function buildBroadcastTable() {
+  const b=st.broadcast;
+  const bxV=((b.bxDisable&7)<<5)|((b.bxRange&7)<<1);
+  const byV=((b.byDisable&7)<<5)|((b.byRange&7)<<1);
+  const bzV=((b.bzDisable&7)<<5)|((b.bzRange&7)<<1);
+  const m1V=((b.timeout&3)<<6)|((b.lowPwr?1:0)<<5)|((b.tempEn?1:0)<<4)|((b.adc&7)<<1)|(b.sigma&1);
+  const m2V=((b.interleave&1)<<7)|((b.outputSize&3)<<5);
+  setBitRow('bx',bxV); $('bx-cfg').textContent=hx(bxV);
+  setBitRow('by',byV); $('by-cfg').textContent=hx(byV);
+  setBitRow('bz',bzV); $('bz-cfg').textContent=hx(bzV);
+  setBitRow('m1',m1V); $('m1-cfg').textContent=hx(m1V);
+  setBitRow('m2',m2V); $('m2-cfg').textContent=hx(m2V);
+}
+function setBitRow(pfx,v) { for(let b=7;b>=0;b--){ const el=$(pfx+b); if(el) el.textContent=(v>>b)&1; } }
+function hx(v) { return `0x${v.toString(16).toUpperCase().padStart(2,'0')}`; }
+
+/* Build config controls (broadcast or individual) into a container element */
+function buildConfigControls(container, cfg, onBroadcastChange, sensorIdx) {
+  container.innerHTML='';
+  const isBroadcast = sensorIdx===undefined;
+
+  function onChange() {
+    if(isBroadcast) {
+      buildBroadcastTable();
+      st.cfgDirty=true;
+      overwriteIndFromBroadcast();
+    } else {
+      st.indDirty[sensorIdx]=true; st.indActive[sensorIdx]=true;
+      setIndSt(sensorIdx,`Pending individual config (0x43) for Sensor ${sensorIdx}`);
+    }
+  }
+
+  // Channel sliders
+  for(const [axis,disKey,rngKey] of [['Bx','bxDisable','bxRange'],['By','byDisable','byRange'],['Bz','bzDisable','bzRange']]) {
+    const title=document.createElement('div'); title.className='section-title'; title.textContent=`${axis} channel`;
+    container.appendChild(title);
+    const row=document.createElement('div'); row.className='ctrl-row';
+
+    // disable/zero_point slider
+    row.appendChild(makeSlider(`Disable/zero_point`, DISABLE_OPTS, cfg, disKey, onChange));
+    // range slider
+    row.appendChild(makeSlider(`Range`, RANGE_OPTS, cfg, rngKey, onChange));
+    container.appendChild(row);
+  }
+
+  // Mode 1
+  const m1t=document.createElement('div'); m1t.className='section-title'; m1t.textContent='Mode 1';
+  container.appendChild(m1t);
+  const m1row=document.createElement('div'); m1row.className='ctrl-row';
+  m1row.appendChild(makeRadioGroup('timeout','timeout',TIMEOUT_OPTS,cfg,'timeout',onChange));
+  m1row.appendChild(makeCheckGroup('low_pwr_en','lowPwr',[['Enable low power mode\n(note: for individual reconfig all sensors must be in the same power mode)']],cfg,'lowPwr',onChange));
+  m1row.appendChild(makeCheckGroup('temp_en','tempEn',[['Enable temperature measurement']],cfg,'tempEn',onChange));
+  m1row.appendChild(makeRadioGroup('adc_conv_time','adc',ADC_OPTS,cfg,'adc',onChange));
+  m1row.appendChild(makeRadioGroup('sigma_delta','sigma',SIGMA_OPTS,cfg,'sigma',onChange));
+  container.appendChild(m1row);
+
+  // Mode 2
+  const m2t=document.createElement('div'); m2t.className='section-title'; m2t.textContent='Mode 2';
+  container.appendChild(m2t);
+  const m2row=document.createElement('div'); m2row.className='ctrl-row';
+  m2row.appendChild(makeRadioGroup('interleave','interleave',INTERLEAVE_OPTS,cfg,'interleave',onChange));
+  m2row.appendChild(makeRadioGroup('output_size','outputSize',OUTPUT_SIZE_OPTS,cfg,'outputSize',onChange));
+  container.appendChild(m2row);
+}
+
+function makeSlider(legendText, opts, cfg, key, onChange) {
+  const box=document.createElement('div'); box.className='ctrl-box';
+  const leg=document.createElement('span'); leg.className='legend'; leg.textContent=legendText; box.appendChild(leg);
+  const wrap=document.createElement('div'); wrap.className='slider-wrap';
+  const sl=document.createElement('input'); sl.type='range'; sl.min=0; sl.max=opts.length-1; sl.value=cfg[key];
+  const lbl=document.createElement('div'); lbl.className='slider-lbl'; lbl.textContent=opts[cfg[key]];
+  sl.addEventListener('input',()=>{ cfg[key]=parseInt(sl.value); lbl.textContent=opts[parseInt(sl.value)]; onChange(); });
+  wrap.appendChild(sl); box.appendChild(wrap); box.appendChild(lbl);
+  return box;
+}
+
+function makeRadioGroup(legendText, nameKey, opts, cfg, cfgKey, onChange) {
+  const box=document.createElement('div'); box.className='ctrl-box';
+  const leg=document.createElement('span'); leg.className='legend'; leg.textContent=legendText; box.appendChild(leg);
+  const uid=Math.random().toString(36).slice(2);
+  for(const [val,label] of opts){
+    const lbl=document.createElement('label'); lbl.className='radio-opt';
+    const rb=document.createElement('input'); rb.type='radio'; rb.name=uid; rb.value=val; rb.checked=(val===cfg[cfgKey]);
+    rb.addEventListener('change',()=>{ if(rb.checked){ cfg[cfgKey]=val; onChange(); } });
+    lbl.appendChild(rb); lbl.appendChild(document.createTextNode(' '+label)); box.appendChild(lbl);
+  }
+  return box;
+}
+
+function makeCheckGroup(legendText, nameKey, opts, cfg, cfgKey, onChange) {
+  const box=document.createElement('div'); box.className='ctrl-box';
+  const leg=document.createElement('span'); leg.className='legend'; leg.textContent=legendText; box.appendChild(leg);
+  const lbl=document.createElement('label'); lbl.className='check-opt';
+  const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=cfg[cfgKey];
+  cb.addEventListener('change',()=>{ cfg[cfgKey]=cb.checked; onChange(); });
+  lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' '+opts[0][0])); box.appendChild(lbl);
+  return box;
+}
+
+function overwriteIndFromBroadcast() {
+  for(let s=0;s<4;s++){
+    Object.assign(st.individual[s], st.broadcast);
+    st.indDirty[s]=false; st.indActive[s]=false;
+    setIndSt(s,'Overwritten by broadcast config (0x7A)');
+    buildConfigControls($(`ind-ctrl-${s}`), st.individual[s], null, s);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  Connection management
+// ═══════════════════════════════════════════════════
+async function connect() {
+  if(!('serial' in navigator)) return;
+  try {
+    // Restrict picker to the target Cypress device VID/PID.
+    st.port=await navigator.serial.requestPort({
+      filters: [{ usbVendorId: USB_VID, usbProductId: USB_PID }],
+    });
+    await st.port.open({baudRate:BAUDRATE, dataBits:8, stopBits:1, parity:'none'});
+  } catch(err) {
+    if(err.name==='NotFoundError'||err.name==='AbortError') return; // user cancelled
+    setConnSt(`Connect failed: ${err.message}`); return;
+  }
+
+  st.writer=st.port.writable.getWriter();
+  st.reader=st.port.readable.getReader();
+  st.serialBuf=new Uint8Array(0);
+  st.running=true;
+
+  // Reset plot history
+  for(const k of Object.keys(st.plotHist)) st.plotHist[k]=[];
+  // Initialize applied configs to current broadcast
+  const defCfg=buildCfgBytes(st.broadcast);
+  st.appliedCfgs=[defCfg,defCfg,defCfg,defCfg];
+  st.cfgDirty=true; st.lastSentCfg=null;
+
+  // Show sensor view
+  $('sensor-view').classList.add('visible');
+  $('connect-btn').style.display='none';
+  $('disconnect-btn').style.display='';
+  setConnSt(`Connected · Hardware version: ${st.hwVer}`);
+  setROSt('idle'); setCfgSt('idle');
+
+  // Start reader coroutine and driver loop concurrently
+  readerCoroutine(); // fire and forget — runs while st.running
+  await runStartup();
+  driverLoop();      // fire and forget — runs while st.running
+}
+
+async function disconnect() {
+  st.running=false;
+  try { if(st.writer){ await st.writer.releaseLock(); st.writer=null; } } catch(_){}
+  try { if(st.reader){ await st.reader.cancel(); st.reader=null; } } catch(_){}
+  try { if(st.port){ await st.port.close(); st.port=null; } } catch(_){}
+
+  $('sensor-view').classList.remove('visible');
+  $('connect-btn').style.display=''; $('disconnect-btn').style.display='none';
+  setConnSt('Disconnected.');
+  if(st.recording) stopRecording();
+}
+
+// ═══════════════════════════════════════════════════
+//  Initialisation
+// ═══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Web Serial availability check
+  if(!('serial' in navigator)){
+    $('no-serial-warn').style.display='';
+    $('connect-btn').disabled=true;
+    setConnSt('Web Serial API not available — use Chrome or Edge 89+.');
+  }
+
+  // Delay slider
+  const delSlider=$('delay-slider');
+  function applyDelay(v){
+    const ms=Math.round(10**(1+(parseInt(v)/100)*2));
+    st.delayMs=ms; $('delay-display').textContent=`${ms} ms`;
+  }
+  delSlider.addEventListener('input',()=>applyDelay(delSlider.value));
+  applyDelay(delSlider.value);
+
+  // Tab switcher
+  $('cfg-tab-bar').addEventListener('click', e=>{
+    const btn=e.target.closest('.tab-btn'); if(!btn) return;
+    const id=btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active'); $(id).classList.add('active');
+  });
+
+  // Hardware version selector
+  $('hw-ver').addEventListener('change', e=>{ st.hwVer=e.target.value; });
+  st.hwVer=$('hw-ver').value;
+
+  // Build broadcast controls
+  buildConfigControls($('bc-controls'), st.broadcast, null, undefined);
+  buildBroadcastTable();
+
+  // Build individual sensor controls
+  for(let s=0;s<4;s++){
+    st.individual[s]={...st.broadcast};
+    buildConfigControls($(`ind-ctrl-${s}`), st.individual[s], null, s);
+  }
+
+  // Buttons
+  $('connect-btn').addEventListener('click', connect);
+  $('disconnect-btn').addEventListener('click', disconnect);
+  $('rec-btn').addEventListener('click', ()=>{ st.recording ? stopRecording() : startRecording(); });
+  $('dl-btn').addEventListener('click', downloadCsv);
+
+  // Redraw plot on window resize
+  window.addEventListener('resize', ()=>{ if(st.running) drawPlot(); });
+});
+</script>
+</body>
+</html>
