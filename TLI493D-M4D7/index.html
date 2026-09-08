@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TLI493D-x4D7 GUI</title>
+<title>TLI493D-M4D7 GUI</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 13px; background: #f0f0f0; color: #1a1a1a; }
@@ -156,20 +156,15 @@ hr.sep { border: none; border-top: 1px solid #e4eaf0; margin: 4px 0; }
 
 <!-- ── Header ─────────────────────────────────────── -->
 <div id="header">
-  <h1>TLI493D-x4D7 GUI</h1>
-  <span class="sub">Web Edition · Build 2026-07-02 · Requires Chrome / Edge</span>
+  <h1>TLI493D-M4D7 GUI</h1>
+  <span class="sub">Web Edition · Build 2026-09-08 · Requires Chrome / Edge</span>
 </div>
 
 <!-- ── Connect bar ────────────────────────────────── -->
 <div id="connect-bar">
-  <label for="hw-ver">Hardware version:</label>
-  <select id="hw-ver">
-    <option value="0000">0000</option>
-    <option value="1000">1000</option>
-  </select>
   <button id="connect-btn" class="btn-primary">Connect Serial Port</button>
   <button id="disconnect-btn" class="btn-secondary" style="display:none">Disconnect</button>
-  <span id="connect-status" class="status-line">Not connected. Select hardware version and click Connect.</span>
+  <span id="connect-status" class="status-line">Not connected. Click Connect Serial Port.</span>
   <div id="no-serial-warn">
     ⚠ Web Serial API not available. Open this file in Chrome or Edge (version 89+).
   </div>
@@ -336,8 +331,6 @@ const IND_CONFIG_CMD     = 0x43;
 const CONFIG_ECHO_LEN    = 6;   // 0x7A + 5 bytes
 const IND_CONFIG_ECHO_LEN= 7;   // 0x43 + addr + 5 bytes
 const BAUDRATE           = 1000000;
-const USB_VID            = 0x058B;
-const USB_PID            = 0xABCD;
 const PLOT_HISTORY_LEN   = 50;
 const RESPONSE_LEN       = 5;
 
@@ -393,6 +386,7 @@ const OFFSETS_MT  = [0, 41.7, 27.8, 13.9, 0, -13.9, -27.8, -41.7];
 const PLOT_COLS   = ['bx', 'by', 'bz', 'temp', 'frame_counter'];
 const INTENSITIES = [0.40, 0.55, 0.72, 0.90];
 const BASE_RGB    = { bx:[255,0,0], by:[0,170,0], bz:[0,90,255], temp:[230,180,0], frame_counter:null };
+const HARDWARE_VERSION = '0000';
 
 // ═══════════════════════════════════════════════════
 //  State
@@ -405,7 +399,7 @@ function defaultCfg() {
 const st = {
   port: null, writer: null, reader: null,
   serialBuf: new Uint8Array(0),
-  running: false, hwVer: '0000',
+  running: false,
 
   broadcast: defaultCfg(),
   individual: [defaultCfg(), defaultCfg(), defaultCfg(), defaultCfg()],
@@ -856,7 +850,7 @@ function stopRecording() {
   $('rec-dot').classList.remove('active');
   if(st.recRows.length){
     const lines=[
-      `# TLI493D-x4D7 Recording`,`# Hardware version: ${st.hwVer}`,`# Recorded at: ${new Date().toISOString()}`,``,
+      `# TLI493D-M4D7 Recording`,`# Hardware version: ${HARDWARE_VERSION}`,`# Recorded at: ${new Date().toISOString()}`,``,
       `timestamp,sensor,bx_lsb,by_lsb,bz_lsb,temp_lsb,frame_counter_lsb`,
       ...st.recRows.map(r=>`${r.ts},${r.s},${r.bx},${r.by},${r.bz},${r.temp},${r.fc}`)
     ];
@@ -992,9 +986,12 @@ function overwriteIndFromBroadcast() {
 async function connect() {
   if(!('serial' in navigator)) return;
   try {
-    // Restrict picker to the target Cypress device VID/PID.
+    // Restrict picker to the supported board VID/PID combinations.
     st.port=await navigator.serial.requestPort({
-      filters: [{ usbVendorId: USB_VID, usbProductId: USB_PID }],
+      filters: [
+        { usbVendorId: 0x058B, usbProductId: 0xABCD },
+        { usbVendorId: 0x04B4, usbProductId: 0x0002 },
+      ],
     });
     await st.port.open({baudRate:BAUDRATE, dataBits:8, stopBits:1, parity:'none'});
   } catch(err) {
@@ -1018,7 +1015,7 @@ async function connect() {
   $('sensor-view').classList.add('visible');
   $('connect-btn').style.display='none';
   $('disconnect-btn').style.display='';
-  setConnSt(`Connected · Hardware version: ${st.hwVer}`);
+  setConnSt('Connected · TLI493D-M4D7');
   setROSt('idle'); setCfgSt('idle');
 
   // Start reader coroutine and driver loop concurrently
@@ -1068,10 +1065,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active'); $(id).classList.add('active');
   });
-
-  // Hardware version selector
-  $('hw-ver').addEventListener('change', e=>{ st.hwVer=e.target.value; });
-  st.hwVer=$('hw-ver').value;
 
   // Build broadcast controls
   buildConfigControls($('bc-controls'), st.broadcast, null, undefined);
