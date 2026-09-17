@@ -75,7 +75,7 @@ html, body { height: 100%; margin: 0; padding: 0; font-family: 'Segoe UI', Tahom
 /* ── Register table ──────────────────────────────── */
 .reg-wrap { overflow-x: auto; margin: 6px 0; }
 .reg-table {
-  border-collapse: collapse; font-size: 9.5px; width: 100%; table-layout: auto;
+  border-collapse: collapse; font-size: 9.5px; width: 100%; table-layout: fixed;
 }
 .reg-table td, .reg-table th {
   border: 1px solid #b0b8c0; padding: 2px 4px; text-align: center; vertical-align: middle;
@@ -198,6 +198,7 @@ hr.sep { border: none; border-top: 1px solid #e4eaf0; margin: 4px 0; }
         <p style="font-size:11px;color:#555;margin-bottom:6px;">Broadcast configuration (0x7A) — configures all sensors identically</p>
         <div class="reg-wrap">
           <table class="reg-table">
+            <colgroup><col span="12" style="width:8.3333%"></colgroup>
             <thead>
               <tr><th colspan="2">bytes</th><th colspan="8">bits</th><th>reset</th><th>active cfg</th></tr>
               <tr><th>name</th><th>hex</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th><th>0</th><th></th><th></th></tr>
