@@ -1,159 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MS2GO Tools</title>
-  <style>
-    :root {
-      --ink: #162331;
-      --muted: #5d6b78;
-      --line: #cbd5dc;
-      --surface: #ffffff;
-      --accent: #176b87;
-      --accent-dark: #0e4c61;
-      --background: #e9f0f2;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { min-height: 100%; margin: 0; }
-
-    body {
-      display: grid;
-      place-items: center;
-      padding: 32px 18px;
-      background:
-        linear-gradient(135deg, rgba(255,255,255,.7), transparent 48%),
-        var(--background);
-      color: var(--ink);
-      font-family: "Segoe UI", Tahoma, sans-serif;
-    }
-
-    main { width: min(720px, 100%); }
-    header { margin-bottom: 22px; }
-
-    .eyebrow {
-      margin: 0 0 8px;
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(28px, 6vw, 46px);
-      line-height: 1.05;
-    }
-
-    .intro {
-      max-width: 540px;
-      margin: 12px 0 0;
-      color: var(--muted);
-      font-size: 16px;
-      line-height: 1.5;
-    }
-
-    .port-detect {
-      color: var(--accent-dark);
-      font-weight: 600;
-    }
-
-    .options { display: grid; gap: 12px; }
-
-    .option {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 20px 22px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      color: inherit;
-      text-decoration: none;
-      box-shadow: 0 8px 24px rgba(22, 35, 49, .08);
-      transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-    }
-
-    .option:hover, .option:focus-visible {
-      border-color: var(--accent);
-      box-shadow: 0 12px 28px rgba(22, 35, 49, .14);
-      transform: translateY(-2px);
-    }
-
-    .option:focus-visible {
-      outline: 3px solid rgba(23, 107, 135, .3);
-      outline-offset: 3px;
-    }
-
-    .option strong { display: block; font-size: 18px; }
-
-    .option span {
-      display: block;
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .arrow {
-      flex: 0 0 auto;
-      color: var(--accent-dark);
-      font-size: 24px;
-      line-height: 1;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .option { transition: none; }
-    }
-  </style>
+  <meta name="theme-color" content="#f2f5f5">
+  <title>Infineon | MS2GO Tools</title>
+  <meta name="description" content="Choose an MS2GO kit and open its browser GUI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/ms2go.css?v=2">
 </head>
 <body>
-  <main>
-    <header>
-      <p class="eyebrow">MS2GO hardware tools</p>
-      <h1>Select a ms2go kit</h1>
-      <p class="intro">Test the <a class="port-detect" id="port-detect" href="#">automatic detection</a> of the connected board or by choosing a serial port to connect to or select the connected hardware manually. <span id="port-status" role="status" aria-live="polite"></span></p>
-    </header>
 
-    <nav class="options" aria-label="Available GUIs">
-      <a class="option" href="TLI493D-M4D7/">
-        <div>
-          <strong>XENSIV&#8482; TLI493D-M4D7</strong>
-          <span>Fourth generation magnetic sensor including low power mode</span>
-        </div>
-        <span class="arrow" aria-hidden="true">&#8594;</span>
-      </a>
-    </nav>
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="Infineon MS2GO tools">
+      <img class="brand-logo" src="./assets/lowres-Logo_Infineon_RGB.eps.png" alt="Infineon Technologies">
+      <span class="brand-text">
+        <strong>MS2GO Tools</strong>
+        <small>Hardware tools in your browser</small>
+      </span>
+    </a>
+  </header>
+
+  <main class="app-shell">
+    <div class="panel">
+      <div class="section-heading">
+        <div><span class="eyebrow">MS2GO HARDWARE TOOLS</span><h1>Select a ms2go kit</h1></div>
+        <span class="section-index">00</span>
+      </div>
+
+      <p class="lead">Test the <a class="port-detect" id="port-detect" href="#">automatic detection</a> of the connected board or by choosing a serial port to connect to or select the connected hardware manually. <span class="port-status" id="port-status" role="status" aria-live="polite"></span></p>
+
+      <nav class="kit-list" aria-label="Available GUIs">
+        <a class="kit-row" href="TLI493D-M4D7/">
+          <span class="kit-index">01</span>
+          <span class="kit-text">
+            <strong>XENSIV&#8482; TLI493D-M4D7</strong>
+            <small>Fourth generation magnetic sensor including low power mode</small>
+          </span>
+          <span class="kit-go">Open GUI</span>
+        </a>
+      </nav>
+    </div>
   </main>
-  <script>
-    document.getElementById('port-detect').addEventListener('click', async event => {
-      event.preventDefault();
-      const status = document.getElementById('port-status');
 
-      if (!('serial' in navigator)) {
-        status.textContent = 'Web Serial is not available in this browser.';
-        return;
-      }
+  <small class="app-version">v1</small>
 
-      try {
-        const port = await navigator.serial.requestPort({
-          filters: [
-            { usbVendorId: 0x058B, usbProductId: 0xABCD },
-            { usbVendorId: 0x04B4, usbProductId: 0x0002 },
-          ],
-        });
-        const info = port.getInfo();
-        const vendor = info.usbVendorId ? `VID 0x${info.usbVendorId.toString(16).toUpperCase()}` : 'USB device';
-        const product = info.usbProductId ? `PID 0x${info.usbProductId.toString(16).toUpperCase()}` : '';
-        status.textContent = `Selected ${vendor} ${product}.`;
-      } catch (error) {
-        if (error.name !== 'NotFoundError' && error.name !== 'AbortError') {
-          status.textContent = `Port detection failed: ${error.message}`;
-        }
-      }
-    });
-  </script>
+  <script src="./js/landing.js?v=1"></script>
 </body>
 </html>
