@@ -87,7 +87,7 @@ const SENSOR_COLORS = ['#12a190', '#eb7000', '#c13c86', '#d9a400'];
 const CHART_PALETTE = { grid: '#e7ebeb', axis: '#dfe4e4', text: '#6b7a7d' };
 const HISTORY_KEEP_MS = 65000;
 
-const MODEL_MODULE = './model3d.js?v=12';     // resolved relative to this script
+const MODEL_MODULE = './model3d.js?v=13';     // resolved relative to this script
 const MODEL_URL = new URL('../assets/models/tli493d_finger.glb?v=2', document.currentScript.src).href;
 
 // ═══════════════════════════════════════════════════

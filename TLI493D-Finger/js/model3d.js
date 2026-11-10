@@ -11,6 +11,10 @@ const POLAR_LIMITS = [0.12, 2.6];
 const RETURN_DELAY = 2200;
 const RETURN_EASE = 0.055;
 const FIT_MARGIN = 1.0;
+// Idle sway up and down around the home view, so the view reads as a 3D model.
+const SWAY_AMPLITUDE = THREE.MathUtils.degToRad(5);   // ±5° = 10° from top to bottom
+const SWAY_FREQUENCY = 0.1;                           // Hz
+const SWAY = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 // The framed region in model metres: the dome and the board right behind it.
 const FRAME_BOX = new THREE.Box3(new THREE.Vector3(-0.0092, -0.0015, -0.0086), new THREE.Vector3(0.0092, 0.0104, 0.0130));
 
@@ -71,7 +75,7 @@ export class FingerModel {
 
     this.azimuth = HOME.azimuth;
     this.polar = HOME.polar;
-    this.lastInput = 0;
+    this.lastInput = -Infinity;
     this.visible = true;
     this.pending = false;
 
@@ -127,6 +131,7 @@ export class FingerModel {
 
       const magnet = this.root.getObjectByName(`Magnet_${name.slice(-1)}`);
       if (!magnet) throw new Error(`Model has no magnet above "${name}"`);
+      magnet.traverse(o => { if (o.isMesh) o.material = makePoleMaterial(o.geometry); });
       const centre = this.root.worldToLocal(new THREE.Box3().setFromObject(magnet).getCenter(new THREE.Vector3()));
       centres.push(centre);
       this.magnets.push({ node: magnet, home: magnet.position.clone(), now: new THREE.Vector3(), want: new THREE.Vector3(), shift: new THREE.Vector3() });
@@ -302,14 +307,17 @@ export class FingerModel {
     if (!this.visible || document.hidden) return;
     let moving = false;
 
-    // Back to the home view a while after the last drag.
-    if (performance.now() - this.lastInput > RETURN_DELAY) {
-      const da = shortestAngle(this.azimuth, HOME.azimuth), dp = HOME.polar - this.polar;
+    // Back to the (swaying) home view a while after the last drag.
+    const now = performance.now();
+    if (now - this.lastInput > RETURN_DELAY) {
+      const sway = SWAY ? SWAY_AMPLITUDE * Math.sin(2 * Math.PI * SWAY_FREQUENCY * now / 1000) : 0;
+      const da = shortestAngle(this.azimuth, HOME.azimuth), dp = HOME.polar + sway - this.polar;
       if (Math.abs(da) > 1e-3 || Math.abs(dp) > 1e-3) {
         this.azimuth += da * RETURN_EASE;
         this.polar += dp * RETURN_EASE;
         moving = true;
       }
+      if (SWAY) moving = true;
     }
 
     let shifted = false;
@@ -483,6 +491,32 @@ export class FingerModel {
 // change (the magnet travel is square-root scaled), hence the root of the shares.
 // While hidden, the resting level follows the load down at once and up only
 // slowly, so a slow drift does not count as a press.
+// Magnet poles: blue on top, red at the bottom, blended across the middle.
+const POLE_TOP = new THREE.Color(0x1f5fd6);
+const POLE_BOTTOM = new THREE.Color(0xd62f2f);
+const POLE_BLEND = 0.08;           // half width of the colour change, as share of the height
+
+function makePoleMaterial(geometry) {
+  if (!geometry.boundingBox) geometry.computeBoundingBox();
+  const { min, max } = geometry.boundingBox;
+  const material = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.1 });
+  material.onBeforeCompile = shader => {
+    shader.uniforms.poleTop = { value: POLE_TOP };
+    shader.uniforms.poleBottom = { value: POLE_BOTTOM };
+    shader.uniforms.poleRange = { value: new THREE.Vector2(min.y, max.y) };
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', 'varying float vPoleY;\n#include <common>')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPoleY = position.y;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', 'varying float vPoleY;\nuniform vec3 poleTop;\nuniform vec3 poleBottom;\nuniform vec2 poleRange;\n#include <common>')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        float poleT = (vPoleY - poleRange.x) / max(poleRange.y - poleRange.x, 1e-6);
+        diffuseColor.rgb = mix(poleBottom, poleTop, smoothstep(${(0.5 - POLE_BLEND).toFixed(3)}, ${(0.5 + POLE_BLEND).toFixed(3)}, poleT));`);
+  };
+  material.customProgramCacheKey = () => 'magnet-poles';
+  return material;
+}
+
 function newGate() { return { on: false, peak: 0, floor: 0, time: 0, still: 0, stillSince: 0 }; }
 
 function passGate(gate, load, now) {
