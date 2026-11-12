@@ -1,0 +1,145 @@
+/* TLI493D & TLE49012 – page-specific layout on top of ../assets/ms2go.css */
+
+/* One colour per sensor, readable on the light page and on the dark stage.
+   Must match SENSOR_COLORS in js/app.js. */
+.swatch-s1 { background: #12a190; }
+.swatch-s2 { background: #eb7000; }
+.swatch-s3 { background: #c13c86; }
+.swatch-s4 { background: #d9a400; }
+
+.ack.is-warn { color: var(--signal); }
+
+/* View settings: a button on the stage opens a small panel below it. */
+.stage-tools { flex-direction: column; align-items: flex-end; }
+.view-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 11px 6px 9px;
+  border: 1px solid var(--stage-line);
+  border-radius: 3px;
+  background: #0b2e33d9;
+  color: #9fb3b5;
+  font: 500 10px var(--mono);
+  letter-spacing: .06em;
+  transition: color .15s ease, border-color .15s ease;
+}
+.view-button svg { width: 16px; height: 16px; transition: transform .3s ease; }
+.view-button:hover, .view-button[aria-expanded="true"] { color: #eaf6f4; border-color: var(--accent); }
+.view-button[aria-expanded="true"] svg { transform: rotate(60deg); }
+.view-button:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 2px; }
+.view-badge { position: absolute; top: -4px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 0 2px var(--stage); }
+
+.view-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 290px;
+  max-width: calc(100vw - 36px);
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  padding: 14px 14px 8px;
+  border: 1px solid var(--stage-line);
+  border-radius: 3px;
+  background: var(--stage);
+  box-shadow: 0 14px 34px #00000059;
+}
+.stage-tool { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stage-tool .segmented { min-width: 158px; }
+.view-reset { justify-self: end; padding: 6px 0; color: var(--accent-soft); font-size: 12px; }
+
+.stream-controls .field { gap: 8px; }
+
+/* ─── Sensor values ──────────────────────────────── */
+
+.value-table { min-width: 560px; }
+.sensor-name small { display: block; color: var(--muted); font: 400 10px var(--mono); }
+.value-table tr.is-missing td { opacity: .45; }
+
+.force-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--surface); }
+.force-values > div { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 4px 10px; padding: 12px 16px; }
+.force-values > div + div { border-left: 1px solid var(--line); }
+.force-values span { color: var(--muted); font: 600 10px var(--mono); }
+.force-values strong { color: var(--ink); font: 600 18px var(--mono); font-variant-numeric: tabular-nums; }
+.force-values small { grid-column: 2; color: var(--muted); font: 10px var(--mono); text-align: right; }
+
+/* ─── Proximity map ──────────────────────────────── */
+
+.map-card {
+  display: grid;
+  grid-template-columns: minmax(240px, 460px) minmax(0, 1fr);
+  gap: 18px 32px;
+  align-items: center;
+}
+/* Closed by default; the foldout keeps the spacing of the subheads around it. */
+.map-foldout { margin: 36px 0 0; }
+.map-foldout + .subhead-row { margin-top: 28px; }
+#map-canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; background: #fbfcfb; }
+
+.map-legend { display: grid; gap: 12px; margin: 0; }
+.map-legend div { display: grid; grid-template-columns: 70px 1fr; gap: 12px; }
+.map-legend dt { color: var(--accent-dark); font: 600 10px var(--mono); letter-spacing: .04em; text-transform: uppercase; padding-top: 2px; }
+.map-legend dd { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+/* ─── History ────────────────────────────────────── */
+
+.chart-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.chart-grid-2 canvas { height: 180px; }
+.history-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(230px, 1fr); gap: 16px; align-items: stretch; }
+.force-chart-card { border: 1px solid var(--line); }
+.force-chart-card canvas { height: 386px; }
+.force-legend { gap: 4px 8px; }
+.force-swatch-diff { background: #d04b38; }
+.force-swatch-shear { background: #168b88; }
+.force-swatch-temp { background: #6b6ab0; }
+.text-button.is-active { background: var(--ink); color: #fff; }
+.text-button.is-active:hover { text-decoration: none; background: var(--accent-dark); }
+
+.field select {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 2px;
+  background: transparent;
+  color: var(--ink);
+  font: 500 12px var(--mono);
+  cursor: pointer;
+}
+.field select:focus { outline: 0; border-bottom-color: var(--accent); }
+
+/* ─── Stage drawing (fallback without WebGL) ─────── */
+
+.model-svg .board { fill: #5c161a; stroke: #8f2a2f; stroke-width: 2; }
+.model-svg .dome { fill: #eaf6f40f; stroke: #6d9298; stroke-width: 2; stroke-dasharray: 6 5; }
+.model-svg .sensor-marks rect { fill: #2b5a61; stroke: #6d9298; stroke-width: 1.5; }
+.model-svg .sensor-marks circle { fill: none; stroke: #9fb3b5; stroke-width: 1.5; }
+.model-svg .sensor-tags text { fill: #9fb3b5; font: 500 12px "IBM Plex Mono", monospace; text-anchor: middle; }
+.model-svg .svg-brand { fill: #7ea4aa; font: 600 15px "Source Sans 3", sans-serif; text-anchor: middle; dominant-baseline: central; }
+
+/* ─── Small screens ──────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .map-card { grid-template-columns: 1fr; justify-items: center; }
+  #map-canvas { max-width: 460px; }
+  .map-legend { width: 100%; }
+  .history-layout { grid-template-columns: 1fr; }
+  .force-chart-card canvas { height: 260px; }
+}
+
+@media (max-width: 760px) {
+  .chart-grid-2 { grid-template-columns: 1fr; }
+}
+
+/* On a phone the open panel sits over the stage; the switches need a little less width. */
+@media (max-width: 640px) {
+  .stage-tool .segmented { min-width: 140px; }
+  .view-panel { width: 270px; }
+}
